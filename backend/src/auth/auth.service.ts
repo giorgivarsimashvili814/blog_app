@@ -1,67 +1,81 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { UsersService } from 'src/users/users.service';
+import { AuthUsernameLoginDto } from './dtos/auth-username-login.dto';
+import { LoginResponseType } from './types/login-response.type';
+import { AuthRegisterDto } from './dtos/auth-register.dto';
+import { User } from 'generated/prisma/client';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
     private jwtService: JwtService,
+    private usersService: UsersService,
   ) {}
 
-  async register(
-    username: string,
-    email: string,
-    password: string,
-  ): Promise<{
-    id: number;
-    username: string;
-    email: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { username }],
-      },
+  async register(registerDto: AuthRegisterDto) {
+    const { username, email, password } = registerDto;
+
+    const hash = await bcrypt.hash(password, 10);
+
+    await this.usersService.createUser({
+      username,
+      email,
+      password: hash,
     });
-
-    if (existingUser) {
-      throw new Error('Username or email already in use');
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await this.prisma.user.create({
-      data: {
-        username,
-        email,
-        password: hashedPassword,
-      },
-    });
-
-    const { password: _, ...safeUser } = newUser;
-    return safeUser;
   }
 
-  async login(username: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { username } });
+  async login(loginDto: AuthUsernameLoginDto): Promise<LoginResponseType> {
+    const { username, password } = loginDto;
+    const user = await this.usersService.findOneUser({
+      username,
+    });
 
-    if (!user) throw new Error('Invalid credentials');
+    if (!user) {
+      throw new HttpException(
+        {
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            username: 'notFound',
+          },
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) throw new Error('Invalid credentials');
+    const isValidPassword = await bcrypt.compare(password, user.password);
 
-    const payload = { sub: user.id, username: user.username };
+    if (!isValidPassword) {
+      throw new HttpException(
+        {
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+          errors: {
+            password: 'incorrectPassword',
+          },
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
 
-    return {
-      token: this.jwtService.sign(payload),
-    };
+    const { accessToken } = await this.getTokensData({
+      id: user.id,
+    });
+
+    return { accessToken };
+  }
+
+  private async getTokensData(data: { id: User['id'] }) {
+    const { id } = data;
+    const accessToken = await this.jwtService.signAsync(
+      { sub: id },
+      { expiresIn: '1h' },
+    );
+
+    return { accessToken };
   }
 }

@@ -1,51 +1,22 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import type { Response } from 'express';
+import { AuthUsernameLoginDto } from './dtos/auth-username-login.dto';
+import { LoginResponseType } from './types/login-response.type';
+import { AuthRegisterDto } from './dtos/auth-register.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  async register(
-    @Body()
-    body: {
-      username: string;
-      email: string;
-      password: string;
-    },
-  ) {
-    return this.authService.register(body.username, body.email, body.password);
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() craeteuserDto: AuthRegisterDto) {
+    return await this.authService.register(craeteuserDto);
   }
 
   @Post('login')
-  async login(
-    @Body() body: { username: string; password: string },
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { token } = await this.authService.login(
-      body.username,
-      body.password,
-    );
-
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      maxAge: 1000 * 60 * 15,
-    });
-
-    return { message: 'Logged in' };
-  }
-
-  @Post('logout')
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-    });
-    return { message: 'Logged out' };
+  @HttpCode(HttpStatus.OK)
+  login(@Body() loginDto: AuthUsernameLoginDto): Promise<LoginResponseType> {
+    return this.authService.login(loginDto);
   }
 }
