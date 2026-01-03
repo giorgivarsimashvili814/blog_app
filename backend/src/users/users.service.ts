@@ -27,7 +27,7 @@ export class UsersService {
     });
   }
 
-  findOneUser(options: Prisma.UserWhereInput): Promise<User | null> {
-    return this.prisma.user.findFirst({ where: options });
+  findOneUser(where: Prisma.UserWhereInput): Promise<User | null> {
+    return this.prisma.user.findFirst({ where: where });
   }
 }
