@@ -31,8 +31,6 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    const token = generateToken(newUser.id, res);
-
     return res.status(201).json({
       status: "success",
       data: {
@@ -41,7 +39,6 @@ export const register = async (req: Request, res: Response) => {
           username,
           email,
         },
-        token,
       },
     });
   } catch (error) {
