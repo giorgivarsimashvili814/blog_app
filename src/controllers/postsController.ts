@@ -23,7 +23,7 @@ export const createPost = async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof ZodError) {
       const errors = z.treeifyError(error);
-      return res.status(400).json({ errors: errors });
+      return res.status(400).json(errors);
     }
     console.error("Create Post Error:", error);
     return res.status(500).json({ error: "Internal server error" });
@@ -54,7 +54,7 @@ export const editPost = async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof ZodError) {
       const errors = z.treeifyError(error);
-      return res.status(400).json({ errors: errors });
+      return res.status(400).json(errors);
     }
     console.error("Edit Post Error:", error);
     return res.status(500).json({ error: "Internal server error" });

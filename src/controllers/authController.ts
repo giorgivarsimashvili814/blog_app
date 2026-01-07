@@ -47,7 +47,7 @@ export const register = async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof ZodError) {
       const errors = z.treeifyError(error);
-      return res.status(400).json({ errors: errors });
+      return res.status(400).json(errors);
     }
     console.error("registration Error:", error);
     return res.status(500).json({ error: "internal server error" });
@@ -84,7 +84,7 @@ export const login = async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof ZodError) {
       const errors = z.treeifyError(error);
-      return res.status(400).json({ errors: errors });
+      return res.status(400).json(errors);
     }
     console.error(error);
     return res.status(500).json({ error: "Internal server error" });
